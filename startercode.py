@@ -118,7 +118,7 @@ def update_cache(breed_ids, cache_file):
             parsed_json, response_url = result
             cache[response_url] = parsed_json
             successful_new_adds += 1
-            
+
     create_cache(cache, cache_file)
 
     if len(breed_ids) == 0:
@@ -143,7 +143,31 @@ def get_longest_lifespan_breed(cache_file):
         A tuple (breed_name, max_lifespan_integer) for the winning breed, OR the
         string "No breeds found" if no breed in the cache has a life.max value.
     """
-    pass
+    cache = load_json(cache_file)
+
+    best_name = None
+    best_lifespan = None
+
+    for entry in cache.values():
+        data = entry.get("data", {})
+        attributes = data.get("attributes", {})
+        name = attributes.get("name")
+        life = attributes.get("life", {})
+        max_life = life.get("max")
+
+        if isinstance(name, str) and isinstance(max_life, int):
+            if best_lifespan is None or max_life > best_lifespan:
+                best_name = name
+                best_lifespan = max_life
+            elif max_life == best_lifespan and name < best_name:
+                best_name = name
+                best_lifespan = max_life
+
+    if best_name is None:
+        return "No breeds found"
+
+    return (best_name, best_lifespan)
+
 
 
 def get_groups_above_cutoff(cutoff, cache_file):
