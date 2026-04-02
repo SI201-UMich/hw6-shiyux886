@@ -186,7 +186,25 @@ def get_groups_above_cutoff(cutoff, cache_file):
     RETURNS:
         A dictionary {group_uuid: count} for groups with count >= cutoff only.
     """
-    pass
+    cache = load_json(cache_file)
+    group_counts = {}
+
+    for entry in cache.values():
+        data = entry.get("data", {})
+        relationships = data.get("relationships", {})
+        group = relationships.get("group", {})
+        group_data = group.get("data", {})
+        group_id = group_data.get("id")
+
+        if group_id is not None:
+            group_counts[group_id] = group_counts.get(group_id, 0) + 1
+
+    result = {}
+    for group_id, count in group_counts.items():
+        if count >= cutoff:
+            result[group_id] = count
+
+    return result
 
 
 # Extra Credit
@@ -210,6 +228,59 @@ def recommend_breeds_in_same_group(breed_name, cache_file):
             "No group information available for '{breed_name}'."  (no group id)
             "No recommendations found based on '{breed_name}'."  (no other breeds in that group)
     """
+    cache = load_json(cache_file)
+
+    if not cache:
+        return "No breed data found in cache."
+
+    target_group_id = None
+    target_actual_name = None
+
+    for entry in cache.values():
+        data = entry.get("data", {})
+        attributes = data.get("attributes", {})
+        name = attributes.get("name")
+
+        if isinstance(name, str) and name.lower() == breed_name.lower():
+            target_actual_name = name
+            relationships = data.get("relationships", {})
+            group = relationships.get("group", {})
+            group_data = group.get("data", {})
+            target_group_id = group_data.get("id")
+            break
+
+    if target_actual_name is None:
+        return f"'{breed_name}' is not in the cache."
+
+    if target_group_id is None:
+        return f"No group information available for '{breed_name}'."
+
+    recommendations = []
+
+    for entry in cache.values():
+        data = entry.get("data", {})
+        attributes = data.get("attributes", {})
+        name = attributes.get("name")
+
+        relationships = data.get("relationships", {})
+        group = relationships.get("group", {})
+        group_data = group.get("data", {})
+        group_id = group_data.get("id")
+
+        if (
+            isinstance(name, str)
+            and name.lower() != target_actual_name.lower()
+            and group_id == target_group_id
+        ):
+            recommendations.append(name)
+
+    recommendations.sort()
+
+    if not recommendations:
+        return f"No recommendations found based on '{breed_name}'."
+
+    return recommendations
+
 
 
 class TestHomeworkDogAPI(unittest.TestCase):
